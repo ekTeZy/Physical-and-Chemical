@@ -1,3 +1,6 @@
+import pandas as pd
+from io import BytesIO
+import plotly.express as px
 import streamlit as st
 from utils.data_loader import load_dataset
 from utils.analysis import compute_basic_metrics
@@ -39,16 +42,18 @@ st.subheader("Основные статистики")
 metrics = compute_basic_metrics(df_filtered)
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Средняя молекулярная масса", f"{metrics['Средняя масса (g/mol)']} g/mol")
-col2.metric("Средняя температура кипения", f"{metrics['Средняя t кипения (K)']} K")
-col3.metric("Медианная температура плавления", f"{metrics['Медианная t плавления (K)']} K")
+col1.metric("Средняя молекулярная масса",
+            f"{metrics['Средняя масса (g/mol)']} g/mol")
+col2.metric("Средняя температура кипения",
+            f"{metrics['Средняя t кипения (K)']} K")
+col3.metric("Медианная температура плавления",
+            f"{metrics['Медианная t плавления (K)']} K")
 
 # Таблица с фильтрованными данными
 st.subheader("Пример отфильтрованных данных")
 st.dataframe(df_filtered.head(10))
 
 # Визуализация гистограммы
-import plotly.express as px
 st.subheader("Распределение температуры кипения")
 fig = px.histogram(
     df_filtered,
@@ -57,3 +62,26 @@ fig = px.histogram(
     title="Гистограмма температур кипения"
 )
 st.plotly_chart(fig, use_container_width=True)
+
+
+@st.cache_data
+def convert_df_to_excel(df):
+    """Преобразует DataFrame в Excel-байты."""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Filtered Data')
+    output.seek(0)
+    return output
+
+
+# Экспорт в Excel
+st.subheader("Экспорт данных")
+
+excel_data = convert_df_to_excel(df_filtered)
+
+st.download_button(
+    label="Скачать таблицу в Excel",
+    data=excel_data,
+    file_name="filtered_data.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
